@@ -30,7 +30,7 @@
 #define SPEED_OF_LIGHT (299792)
 #define LITTLE_H (1)
 
-
+#define ADD_DIFF_TIME(tstart,tend)                        ((tend.tv_sec - tstart.tv_sec) + 1e-6*(tend.tv_usec-tstart.tv_usec)) 
 #define MEMORY_INCREASE_FAC                               (1.2)
 
 
@@ -47,12 +47,14 @@ int main(int argc, char *argv[])
 /* Input Properties of Galaxies */	
 	
 	char *Galaxy_Morphology;
+	int *Galaxy_ID;
 	double *Galaxy_RA,
 			*Galaxy_Dec,
 			*Galaxy_Velocity,
 			*Galaxy_Bj_mag,
 			*Galaxy_R_mag,
-			*Galaxy_I_mag;
+			*Galaxy_I_mag,
+			*Galaxy_Sint;
 			
 			
 /* Calculated Properties of Galaxies */
@@ -75,7 +77,6 @@ int main(int argc, char *argv[])
 			*Group_Velocity,
 			*Group_Given_Distance,
 			*Group_2_Radius,
-			*Group_Vir_Radius,
 			*Group_Ngroup;
 
 /* Calculated Properties of Groups */
@@ -118,31 +119,55 @@ int main(int argc, char *argv[])
 	group_file=argv[2];
 
 
-/* Read in Galaxy File */
+/* Allocation For Galaxies */
 
+	Galaxy_ID       = my_calloc(sizeof(*Galaxy_ID),Galaxy_Size);
 	Galaxy_RA       = my_calloc(sizeof(*Galaxy_RA),Galaxy_Size);
 	Galaxy_Dec      = my_calloc(sizeof(*Galaxy_Dec),Galaxy_Size);
 	Galaxy_Velocity = my_calloc(sizeof(*Galaxy_Velocity),Galaxy_Size);
 	Galaxy_Bj_mag   = my_calloc(sizeof(*Galaxy_Bj_mag),Galaxy_Size);
 	Galaxy_R_mag    = my_calloc(sizeof(*Galaxy_R_mag),Galaxy_Size);
 	Galaxy_I_mag    = my_calloc(sizeof(*Galaxy_I_mag),Galaxy_Size);
+	Galaxy_Sint		= my_calloc(sizeof(*Galaxy_Sint),Galaxy_Size);
 	Galaxy_Morphology      = my_calloc(sizeof(*Galaxy_Morphology),Galaxy_Size);
+
+
+	Galaxy_X      = my_calloc(sizeof(*Galaxy_X),Galaxy_Size);
+	Galaxy_Y      = my_calloc(sizeof(*Galaxy_Y),Galaxy_Size);
+	Galaxy_Z      = my_calloc(sizeof(*Galaxy_Z),Galaxy_Size);
+	Galaxy_Distance      = my_calloc(sizeof(*Galaxy_Distance),Galaxy_Size);
+	Galaxy_HI_Mass      = my_calloc(sizeof(*Galaxy_HI_Mass),Galaxy_Size);
+
+/* Allocation for Groups */
+
+	Group_RA	= my_calloc(sizeof(*Group_RA),Group_Size);
+	Group_Dec	= my_calloc(sizeof(*Group_Dec),Group_Size);
+	Group_Velocity	= my_calloc(sizeof(*Group_Velocity),Group_Size);
+	Group_Given_Distance	= my_calloc(sizeof(*Group_Given_Distance),Group_Size);
+	Group_2_Radius	= my_calloc(sizeof(*Group_2_Radius),Group_Size);
+	Group_Ngroup	= my_calloc(sizeof(*Group_Ngroup),Group_Size);
 	
-	  /////////////////////////////* [ READ IN THE GALAXY FILES AND CONVERT REDSHIFTS TO MPC ] *////////////////////////////////////
+	  /////////////////////////////* [ READ IN THE GALAXY FILE ] *////////////////////////////////////
   	
 
 	gettimeofday(&t0,NULL);
 	fp1 = my_fopen(galaxy_file,"r") ;
 	i=0;
-	nitems=7;
+	nitems=9;
 
 	while(fgets(buffer,MAXBUFSIZE,fp1)!=NULL) {
-    	nread=sscanf(buffer,"%lf %lf %lf %lf %lf %lf %c",
-    		&Galaxy_RA[i],&Galaxy_Dec[i],&Galaxy_Velocity[i],
+    	nread=sscanf(buffer,"%d %lf %lf %lf %lf %lf %lf %lf %c",
+    		&Galaxy_ID[i],&Galaxy_RA[i],&Galaxy_Dec[i],&Galaxy_Velocity[i],
     		&Galaxy_Bj_mag[i],&Galaxy_R_mag[i], &Galaxy_I_mag[i],
-    		&Galaxy_Morphology[i]);
+    		&Galaxy_Sint[i],&Galaxy_Morphology[i]);
+
 
 		if (nread == nitems) {
+      		Galaxy_Distance[i]=Galaxy_Velocity[i] / H_0;
+      		Galaxy_X[i]= Galaxy_Distance[i] * sin((90-Galaxy_Dec[i])*DEG_TO_RAD)*cos(Galaxy_RA[i]*DEG_TO_RAD);
+      		Galaxy_Y[i]= Galaxy_Distance[i] * sin((90-Galaxy_Dec[i])*DEG_TO_RAD)*sin(Galaxy_RA[i]*DEG_TO_RAD);
+      		Galaxy_Z[i]= Galaxy_Distance[i] * cos((90-Galaxy_Dec[i])*DEG_TO_RAD);
+      		Galaxy_HI_Mass[i] = 2.365 * 1E5 * Galaxy_Distance[i] * Galaxy_Distance[i] * Galaxy_Sint[i];
       		i++;
 
 			if(i==Galaxy_Size) {
@@ -157,7 +182,13 @@ int main(int argc, char *argv[])
 				Galaxy_R_mag    = my_realloc(Galaxy_R_mag,sizeof(*Galaxy_R_mag),Galaxy_Size,"Galaxy_R_mag");
 				Galaxy_I_mag    = my_realloc(Galaxy_I_mag,sizeof(*Galaxy_I_mag),Galaxy_Size,"Galaxy_I_mag");
 				Galaxy_Morphology      = my_realloc(Galaxy_Morphology,sizeof(*Galaxy_Morphology),Galaxy_Size,"Galaxy_Morphology");
-	
+
+				Galaxy_Distance       = my_realloc(Galaxy_Distance,sizeof(*Galaxy_Distance),Galaxy_Size,"Galaxy_Distance");
+				Galaxy_X       = my_realloc(Galaxy_X,sizeof(*Galaxy_X),Galaxy_Size,"Galaxy_X");
+				Galaxy_Y       = my_realloc(Galaxy_Y,sizeof(*Galaxy_Y),Galaxy_Size,"Galaxy_Y");
+				Galaxy_Z       = my_realloc(Galaxy_Z,sizeof(*Galaxy_Z),Galaxy_Size,"Galaxy_Z");
+				Galaxy_HI_Mass       = my_realloc(Galaxy_HI_Mass,sizeof(*Galaxy_HI_Mass),Galaxy_Size,"Galaxy_HI_Mass");
+
 
       }
     } else {
@@ -169,8 +200,16 @@ int main(int argc, char *argv[])
   gettimeofday(&t1,NULL);
 
 
-/* Calculate Galaxy Properties */
+  fprintf(stderr,"Group Finder > There are %d Galaxies. Time taken = %6.2lf sec\n",N_Gal,ADD_DIFF_TIME(t0,t1));	
 
+
+	  /////////////////////////////* [ READ IN THE GROUP FILE ] *////////////////////////////////////
+
+
+	gettimeofday(&t0,NULL);
+	fp2 = my_fopen(group_file,"r") ;
+	i=0;
+	nitems=6;
 
 
 /* Read in Group File */
