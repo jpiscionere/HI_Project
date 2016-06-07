@@ -147,6 +147,14 @@ int main(int argc, char *argv[])
 	Group_2_Radius	= my_calloc(sizeof(*Group_2_Radius),Group_Size);
 	Group_Ngroup	= my_calloc(sizeof(*Group_Ngroup),Group_Size);
 	
+	Group_Distance	= my_calloc(sizeof(*Group_Distance),Group_Size);
+	Group_X	= my_calloc(sizeof(*Group_X),Group_Size);
+	Group_Y	= my_calloc(sizeof(*Group_Y),Group_Size);
+	Group_Z	= my_calloc(sizeof(*Group_Z),Group_Size);
+	Group_HI_Mass	= my_calloc(sizeof(*Group_HI_Mass),Group_Size);
+	Group_Ltot	= my_calloc(sizeof(*Group_Ltot),Group_Size);
+	
+	
 	  /////////////////////////////* [ READ IN THE GALAXY FILE ] *////////////////////////////////////
   	
 
@@ -210,6 +218,47 @@ int main(int argc, char *argv[])
 	fp2 = my_fopen(group_file,"r") ;
 	i=0;
 	nitems=6;
+
+	while(fgets(buffer,MAXBUFSIZE,fp2)!=NULL) {
+    	nread=sscanf(buffer,"%lf %lf %lf %lf %lf %lf",
+    		&Group_RA[i],&Group_Dec[i],&Group_Velocity[i],
+    		&Group_Given_Distance[i],&Group_2_Radius[i], &Group_Ngroup[i]);
+
+		if (nread == nitems) {
+      		Group_Distance[i]=Group_Velocity[i] / H_0;
+      		Group_X[i]= Group_Distance[i] * sin((90-Group_Dec[i])*DEG_TO_RAD)*cos(Group_RA[i]*DEG_TO_RAD);
+      		Group_Y[i]= Group_Distance[i] * sin((90-Group_Dec[i])*DEG_TO_RAD)*sin(Group_RA[i]*DEG_TO_RAD);
+      		Group_Z[i]= Group_Distance[i] * cos((90-Group_Dec[i])*DEG_TO_RAD);
+      		i++;
+
+			if(i==Group_Size) {
+	
+				fprintf(stderr,"Increasing memory allocation for the spectroscopic sample\n");
+				Galaxy_Size *= MEMORY_INCREASE_FAC;
+				
+				Group_RA       = my_realloc(Group_RA,sizeof(*Group_RA),Group_Size,"Group_RA");
+				Group_Dec      = my_realloc(Group_Dec,sizeof(*Group_Dec),Group_Size,"Group_Dec");
+				Group_Velocity = my_realloc(Group_Velocity,sizeof(*Group_Velocity),Group_Size,"Group_Velocity");
+				Group_Given_Distance = my_realloc(Group_Given_Distance,sizeof(*Group_Velocity),Group_Size,"Group_Given_Distance");
+				Group_2_Radius = my_realloc(Group_2_Radius,sizeof(*Group_Velocity),Group_Size,"Group_2_Radius");
+				Group_Ngroup = my_realloc(Group_Ngroup,sizeof(*Group_Velocity),Group_Size,"Group_Ngroup");
+
+				Group_Distance       = my_realloc(Group_Distance,sizeof(*Group_Distance),Group_Size,"Group_Distance");
+				Group_X       = my_realloc(Group_X,sizeof(*Group_X),Group_Size,"Group_X");
+				Group_Y       = my_realloc(Group_Y,sizeof(*Group_Y),Group_Size,"Group_Y");
+				Group_Z       = my_realloc(Group_Z,sizeof(*Group_Z),Group_Size,"Group_Z");
+
+      	}
+    } else {
+      fprintf(stderr,"WARNING: In spectroscopic sample line %d did not contain %d elements...skipping line\n",i,nitems);
+    }
+}
+
+
+
+
+
+
 
 
 /* Read in Group File */
