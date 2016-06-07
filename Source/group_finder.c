@@ -26,9 +26,9 @@
 #define OMEGA_M (0.3)
 #define OMEGA_L (0.7)
 #define W_INDEX (-1.0)
-#define H_0 (100)
-#define SPEED_OF_LIGHT (299792)
-#define LITTLE_H (1)
+#define H_0 (100.)
+#define SPEED_OF_LIGHT (299792.)
+#define LITTLE_H (1.)
 
 #define ADD_DIFF_TIME(tstart,tend)                        ((tend.tv_sec - tstart.tv_sec) + 1e-6*(tend.tv_usec-tstart.tv_usec)) 
 #define MEMORY_INCREASE_FAC                               (1.2)
@@ -253,11 +253,6 @@ int main(int argc, char *argv[])
       fprintf(stderr,"WARNING: In spectroscopic sample line %d did not contain %d elements...skipping line\n",i,nitems);
     }
 }
-
-
-
-
-
 
 
 
