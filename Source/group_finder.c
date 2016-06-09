@@ -30,6 +30,10 @@
 #define SPEED_OF_LIGHT (299792.)
 #define LITTLE_H (1.)
 
+#define 	GSL_MAX(a, b)   ((a) > (b) ? (a) : (b))
+#define 	GSL_MIN(a, b)   ((a) < (b) ? (a) : (b))
+
+
 #define ADD_DIFF_TIME(tstart,tend)                        ((tend.tv_sec - tstart.tv_sec) + 1e-6*(tend.tv_usec-tstart.tv_usec)) 
 #define MEMORY_INCREASE_FAC                               (1.2)
 
@@ -37,7 +41,7 @@
 int main(int argc, char *argv[])
 {
 
-    int nthreads=16,chunk=CHUNKSIZE;
+    int nthreads=4,chunk=CHUNKSIZE;
 
 	int i, j, k;
 
@@ -70,7 +74,7 @@ int main(int argc, char *argv[])
 /* Input Properties of Groups */
 
 	int		N_Group=0,
-			Group_Size=1E6;
+			Group_Size=1E5;
 
 	double *Group_RA,
 			*Group_Dec,
@@ -92,6 +96,7 @@ int main(int argc, char *argv[])
 	
 	int **Galaxies_In_Group,
   		*Belong_to_Group,
+		Max_Group_Members=20,
   		*Beong_to_Galaxy;
   	
   	double Min_Dec_Separation,
@@ -218,17 +223,27 @@ int main(int argc, char *argv[])
 	fp2 = my_fopen(group_file,"r") ;
 	i=0;
 	nitems=6;
+	double	Max_Radius=0,Distance_to_Nearest_Group=20000;
 
 	while(fgets(buffer,MAXBUFSIZE,fp2)!=NULL) {
     	nread=sscanf(buffer,"%lf %lf %lf %lf %lf %lf",
     		&Group_RA[i],&Group_Dec[i],&Group_Velocity[i],
     		&Group_Given_Distance[i],&Group_2_Radius[i], &Group_Ngroup[i]);
 
+
+
 		if (nread == nitems) {
       		Group_Distance[i]=Group_Velocity[i] / H_0;
       		Group_X[i]= Group_Distance[i] * sin((90-Group_Dec[i])*DEG_TO_RAD)*cos(Group_RA[i]*DEG_TO_RAD);
       		Group_Y[i]= Group_Distance[i] * sin((90-Group_Dec[i])*DEG_TO_RAD)*sin(Group_RA[i]*DEG_TO_RAD);
       		Group_Z[i]= Group_Distance[i] * cos((90-Group_Dec[i])*DEG_TO_RAD);
+      		
+      		if(Group_Distance[i] < Distance_to_Nearest_Group)
+      			Distance_to_Nearest_Group = Group_Distance[i];
+
+			if(Group_2_Radius[i] > Max_Radius)
+				Max_Radius=Group_2_Radius[i];      		
+      		
       		i++;
 
 			if(i==Group_Size) {
@@ -255,22 +270,26 @@ int main(int argc, char *argv[])
 }
 
 
+double Maximum_Dec_Separation=asin(Max_Radius/(2*Distance_to_Nearest_Group))*2.*RAD_TO_DEG*1.00002;
 
-/* Read in Group File */
+/* Grid Link Galaxies */
+
+  int ngrid;/* *gridinit1D,*gridlist1D ; */
+  double dmin=-90,dmax=0;//min/max dec
+  double inv_dmax_diff = 1.0/(dmax-dmin);
+  cellarray *lattice;
+  cellarray *cellstruct __attribute__((aligned(ALIGNMENT)));
+
+  int xx=0;
+  for(i=0;i<ngrid;i++)
+    xx+= lattice[i].nelements;
 
 
-/* Calculate Group Properties */
-
-
-
-
-
-
-
-
-
-
+  double Group_Finder_Threads[N_Group][20][nthreads];
   
+  Galaxies_In_Group    = my_malloc(sizeof(double *),N_Group);
+  for(i=0;i<N_Group;i++)
+    Galaxies_In_Group[i] = my_calloc(sizeof(double),Max_Group_Members);
 
 
 
