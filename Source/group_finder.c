@@ -51,7 +51,8 @@ int main(int argc, char *argv[])
 /* Input Properties of Galaxies */	
 	
 	char *Galaxy_Morphology;
-	int *Galaxy_ID;
+	int *Galaxy_ID,
+		*Belong_To_Group;
 	double *Galaxy_RA,
 			*Galaxy_Dec,
 			*Galaxy_Velocity,
@@ -63,8 +64,8 @@ int main(int argc, char *argv[])
 			
 /* Calculated Properties of Galaxies */
 			
-	int		N_Gal=0,
-			Galaxy_Size=1E5;
+	int		N_Galaxy=0,
+			Galaxy_Size=1E4;
 	double	*Galaxy_Distance,
 			*Galaxy_X,
 			*Galaxy_Y,
@@ -74,14 +75,15 @@ int main(int argc, char *argv[])
 /* Input Properties of Groups */
 
 	int		N_Group=0,
-			Group_Size=1E5;
+			Group_Size=1E4,
+			*Group_Ngroup;
 
 	double *Group_RA,
 			*Group_Dec,
 			*Group_Velocity,
 			*Group_Given_Distance,
 			*Group_2_Radius,
-			*Group_Ngroup;
+			*Group_Radius_SQR;
 
 /* Calculated Properties of Groups */
 
@@ -95,9 +97,8 @@ int main(int argc, char *argv[])
 /*Pair Finding Quantities */
 	
 	int **Galaxies_In_Group,
-  		*Belong_to_Group,
 		Max_Group_Members=20,
-  		*Beong_to_Galaxy;
+  		*Belong_To_Galaxy;
   	
   	double Min_Dec_Separation,
   			distance_SQR;
@@ -149,9 +150,10 @@ int main(int argc, char *argv[])
 	Group_Dec	= my_calloc(sizeof(*Group_Dec),Group_Size);
 	Group_Velocity	= my_calloc(sizeof(*Group_Velocity),Group_Size);
 	Group_Given_Distance	= my_calloc(sizeof(*Group_Given_Distance),Group_Size);
-	Group_2_Radius	= my_calloc(sizeof(*Group_2_Radius),Group_Size);
 	Group_Ngroup	= my_calloc(sizeof(*Group_Ngroup),Group_Size);
-	
+	Group_2_Radius	= my_calloc(sizeof(*Group_2_Radius),Group_Size);
+
+	Group_Radius_SQR	= my_calloc(sizeof(*Group_Radius_SQR),Group_Size);	
 	Group_Distance	= my_calloc(sizeof(*Group_Distance),Group_Size);
 	Group_X	= my_calloc(sizeof(*Group_X),Group_Size);
 	Group_Y	= my_calloc(sizeof(*Group_Y),Group_Size);
@@ -185,7 +187,7 @@ int main(int argc, char *argv[])
 
 			if(i==Galaxy_Size) {
 	
-				fprintf(stderr,"Increasing memory allocation for the spectroscopic sample\n");
+				fprintf(stderr,"Increasing memory allocation for the galaxy sample\n");
 				Galaxy_Size *= MEMORY_INCREASE_FAC;
 				
 				Galaxy_RA       = my_realloc(Galaxy_RA,sizeof(*Galaxy_RA),Galaxy_Size,"Galaxy_RA");
@@ -208,12 +210,12 @@ int main(int argc, char *argv[])
       fprintf(stderr,"WARNING: In spectroscopic sample line %d did not contain %d elements...skipping line\n",i,nitems);
     }
   }
-  N_Gal=i;
+  N_Galaxy=i;
   fclose(fp1);
   gettimeofday(&t1,NULL);
 
 
-  fprintf(stderr,"Group Finder > There are %d Galaxies. Time taken = %6.2lf sec\n",N_Gal,ADD_DIFF_TIME(t0,t1));	
+  fprintf(stderr,"Group Finder > There are %d Galaxies. Time taken = %6.2lf sec\n",N_Galaxy,ADD_DIFF_TIME(t0,t1));	
 
 
 	  /////////////////////////////* [ READ IN THE GROUP FILE ] *////////////////////////////////////
@@ -225,18 +227,21 @@ int main(int argc, char *argv[])
 	nitems=6;
 	double	Max_Radius=0,Distance_to_Nearest_Group=20000;
 
+
+
 	while(fgets(buffer,MAXBUFSIZE,fp2)!=NULL) {
-    	nread=sscanf(buffer,"%lf %lf %lf %lf %lf %lf",
-    		&Group_RA[i],&Group_Dec[i],&Group_Velocity[i],
-    		&Group_Given_Distance[i],&Group_2_Radius[i], &Group_Ngroup[i]);
-
-
-
+		nread=sscanf(buffer,"%lf %lf %lf %lf %lf %d",
+			&Group_RA[i],&Group_Dec[i],&Group_Velocity[i],&Group_Given_Distance[i],&Group_2_Radius[i],&Group_Ngroup[i]);
+	
 		if (nread == nitems) {
+		
+
       		Group_Distance[i]=Group_Velocity[i] / H_0;
       		Group_X[i]= Group_Distance[i] * sin((90-Group_Dec[i])*DEG_TO_RAD)*cos(Group_RA[i]*DEG_TO_RAD);
       		Group_Y[i]= Group_Distance[i] * sin((90-Group_Dec[i])*DEG_TO_RAD)*sin(Group_RA[i]*DEG_TO_RAD);
       		Group_Z[i]= Group_Distance[i] * cos((90-Group_Dec[i])*DEG_TO_RAD);
+      		Group_Radius_SQR[i]=Group_2_Radius[i]*Group_2_Radius[i];
+      		
       		
       		if(Group_Distance[i] < Distance_to_Nearest_Group)
       			Distance_to_Nearest_Group = Group_Distance[i];
@@ -248,49 +253,88 @@ int main(int argc, char *argv[])
 
 			if(i==Group_Size) {
 	
-				fprintf(stderr,"Increasing memory allocation for the spectroscopic sample\n");
-				Galaxy_Size *= MEMORY_INCREASE_FAC;
+				fprintf(stderr,"Increasing memory allocation for the group sample\n");
+				Group_Size *= MEMORY_INCREASE_FAC;
 				
 				Group_RA       = my_realloc(Group_RA,sizeof(*Group_RA),Group_Size,"Group_RA");
 				Group_Dec      = my_realloc(Group_Dec,sizeof(*Group_Dec),Group_Size,"Group_Dec");
 				Group_Velocity = my_realloc(Group_Velocity,sizeof(*Group_Velocity),Group_Size,"Group_Velocity");
-				Group_Given_Distance = my_realloc(Group_Given_Distance,sizeof(*Group_Velocity),Group_Size,"Group_Given_Distance");
-				Group_2_Radius = my_realloc(Group_2_Radius,sizeof(*Group_Velocity),Group_Size,"Group_2_Radius");
-				Group_Ngroup = my_realloc(Group_Ngroup,sizeof(*Group_Velocity),Group_Size,"Group_Ngroup");
+				Group_Given_Distance = my_realloc(Group_Given_Distance,sizeof(*Group_Given_Distance),Group_Size,"Group_Given_Distance");
+				Group_2_Radius = my_realloc(Group_2_Radius,sizeof(*Group_2_Radius),Group_Size,"Group_2_Radius");
+				Group_Radius_SQR = my_realloc(Group_Radius_SQR,sizeof(*Group_Radius_SQR),Group_Size,"Group_Radius_SQR");
+				Group_Ngroup = my_realloc(Group_Ngroup,sizeof(*Group_Ngroup),Group_Size,"Group_Ngroup");
 
 				Group_Distance       = my_realloc(Group_Distance,sizeof(*Group_Distance),Group_Size,"Group_Distance");
 				Group_X       = my_realloc(Group_X,sizeof(*Group_X),Group_Size,"Group_X");
 				Group_Y       = my_realloc(Group_Y,sizeof(*Group_Y),Group_Size,"Group_Y");
 				Group_Z       = my_realloc(Group_Z,sizeof(*Group_Z),Group_Size,"Group_Z");
 
-      	}
-    } else {
-      fprintf(stderr,"WARNING: In spectroscopic sample line %d did not contain %d elements...skipping line\n",i,nitems);
-    }
-}
+      		}
+    	} else {
+      		fprintf(stderr,"WARNING: In spectroscopic sample line %d did not contain %d elements...skipping line\n",i,nitems);
+    	}
+	}
 
+	N_Group=i;
+	fclose(fp2);
+	gettimeofday(&t1,NULL);
+  	fprintf(stderr,"Group Finder > There are %d Groups. Time taken = %6.2lf sec\n",N_Group,ADD_DIFF_TIME(t0,t1));	
+	fprintf(stderr,"The Maximum Radius = %lf\n",Max_Radius);
+	
 
-double Maximum_Dec_Separation=asin(Max_Radius/(2*Distance_to_Nearest_Group))*2.*RAD_TO_DEG*1.00002;
+// Grid Link Galaxies 
 
-/* Grid Link Galaxies */
+	int interrupted=0;
+	int ngrid;/* *gridinit1D,*gridlist1D ; */
+	double dmin=-90,dmax=0;//min/max dec
+	double inv_dmax_diff = 1.0/(dmax-dmin);
+	cellarray *lattice;
+	cellarray *cellstruct __attribute__((aligned(ALIGNMENT)));
+	init_my_progressbar(N_Group,&interrupted);
 
-  int ngrid;/* *gridinit1D,*gridlist1D ; */
-  double dmin=-90,dmax=0;//min/max dec
-  double inv_dmax_diff = 1.0/(dmax-dmin);
-  cellarray *lattice;
-  cellarray *cellstruct __attribute__((aligned(ALIGNMENT)));
-
-  int xx=0;
-  for(i=0;i<ngrid;i++)
-    xx+= lattice[i].nelements;
-
-
-  double Group_Finder_Threads[N_Group][20][nthreads];
   
-  Galaxies_In_Group    = my_malloc(sizeof(double *),N_Group);
-  for(i=0;i<N_Group;i++)
-    Galaxies_In_Group[i] = my_calloc(sizeof(double),Max_Group_Members);
+  	int xx=0;
+  	
+//  	for(i=0;i<ngrid;i++)
+//    	xx+= lattice[i].nelements;
 
+	
+
+ // 	double Group_Finder_Threads[N_Group][Max_Group_Members][nthreads];
+  	double Radius_Cut=2.* Max_Radius;
+  	fprintf(stderr,"Radius Cut = %lf\n",Radius_Cut);
+  	Galaxies_In_Group    = my_malloc(sizeof(int *),N_Group);
+  	
+  	
+  	for(i=0;i<N_Group;i++)
+    	Galaxies_In_Group[i] = my_calloc(sizeof(int),Max_Group_Members);
+	
+	Belong_To_Group = my_calloc(sizeof(*Belong_To_Group),N_Galaxy);
+	Group_HI_Mass	= my_calloc(sizeof(*Group_HI_Mass),N_Group);
+	
+
+	
+	for(i=0;i<N_Group;i++){
+		init_my_progressbar(N_Group,&interrupted);
+		for(j=0;j<N_Galaxy;j++){
+			if(fabs(Group_Distance[i] - Galaxy_Distance[j]) < Radius_Cut){
+				distance_SQR=(Group_X[i] - Galaxy_X[j])*(Group_X[i] - Galaxy_X[j]) *
+							(Group_Y[i] - Galaxy_Y[j])*(Group_Y[i] - Galaxy_Y[j]) *
+							(Group_Z[i] - Galaxy_Z[j])*(Group_Z[i] - Galaxy_Z[j]);
+							
+				if(distance_SQR < Group_Radius_SQR[i]){
+					Galaxies_In_Group[i][0]++;
+					Galaxies_In_Group[i][Galaxies_In_Group[i][0]] = j;
+					Group_HI_Mass[i]+=Galaxy_HI_Mass[j];
+					Belong_To_Group[j]++;
+				}
+				
+			} 
+		}	
+	}
+	
+	 
+     finish_myprogressbar(&interrupted);
 
 
 
