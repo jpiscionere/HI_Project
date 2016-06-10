@@ -1,0 +1,46 @@
+group_finder.c:15:9: warning: 'MAXLEN' macro redefined [-Wmacro-redefined]
+#define MAXLEN          (5000)
+        ^
+./progressbar.h:11:9: note: previous definition is here
+#define MAXLEN 1000
+        ^
+group_finder.c:319:6: warning: unused variable 'tid' [-Wunused-variable]
+        int tid = omp_get_thread_num();
+            ^
+group_finder.c:291:13: warning: unused variable 'lattice' [-Wunused-variable]
+        cellarray *lattice;
+                   ^
+group_finder.c:46:12: warning: unused variable 'k' [-Wunused-variable]
+        int i, j, k;
+                  ^
+group_finder.c:290:9: warning: unused variable 'inv_dmax_diff' [-Wunused-variable]
+        double inv_dmax_diff = 1.0/(dmax-dmin);
+               ^
+group_finder.c:103:11: warning: unused variable 'Min_Dec_Separation' [-Wunused-variable]
+        double Min_Dec_Separation,
+               ^
+group_finder.c:101:6: warning: unused variable 'Belong_To_Galaxy' [-Wunused-variable]
+                *Belong_To_Galaxy;
+                 ^
+group_finder.c:115:3: warning: unused variable 'flag' [-Wunused-variable]
+                flag;
+                ^
+group_finder.c:288:6: warning: unused variable 'ngrid' [-Wunused-variable]
+        int ngrid;/* *gridinit1D,*gridlist1D ; */
+            ^
+group_finder.c:117:9: warning: unused variable 'trash_lf' [-Wunused-variable]
+        double trash_lf;
+               ^
+group_finder.c:297:8: warning: unused variable 'xx' [-Wunused-variable]
+        int xx=0;
+            ^
+group_finder.c:114:3: warning: unused variable 'trash_d' [-Wunused-variable]
+                trash_d,
+                ^
+group_finder.c:292:13: warning: unused variable 'cellstruct' [-Wunused-variable]
+        cellarray *cellstruct __attribute__((aligned(ALIGNMENT)));
+                   ^
+group_finder.c:41:14: warning: unused parameter 'argc' [-Wunused-parameter]
+int main(int argc, char *argv[])
+             ^
+14 warnings generated.

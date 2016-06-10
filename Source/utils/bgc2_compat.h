@@ -1,0 +1,7 @@
+#ifndef _BGC2_COMPAT_H_
+#define _BGC2_COMPAT_H_
+
+#define OUTPUT_HEADER BGC2_HEADER
+#define OUTPUT_HEADER_SIZE BGC2_HEADER_SIZE
+
+#endif /* _BGC2_COMPAT_H_ */

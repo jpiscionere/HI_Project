@@ -291,16 +291,12 @@ int main(int argc, char *argv[])
 	cellarray *lattice;
 	cellarray *cellstruct __attribute__((aligned(ALIGNMENT)));
 	init_my_progressbar(N_Group,&interrupted);
+    omp_set_num_threads(nthreads);
 
   
   	int xx=0;
   	
-//  	for(i=0;i<ngrid;i++)
-//    	xx+= lattice[i].nelements;
 
-	
-
- // 	double Group_Finder_Threads[N_Group][Max_Group_Members][nthreads];
   	double Radius_Cut=2.* Max_Radius;
   	fprintf(stderr,"Radius Cut = %lf\n",Radius_Cut);
   	Galaxies_In_Group    = my_malloc(sizeof(int *),N_Group);
@@ -311,15 +307,19 @@ int main(int argc, char *argv[])
 	
 	Belong_To_Group = my_calloc(sizeof(*Belong_To_Group),N_Galaxy);
 	Group_HI_Mass	= my_calloc(sizeof(*Group_HI_Mass),N_Group);
-	
-
-	
+	int i_flag=0,group_counter=0;
+/*
+#pragma omp parallel default(none) shared(interrupted,N_Galaxy,N_Group,Group_Distance,Galaxy_Distance,Radius_Cut,Group_X,Group_Y,Group_Z,Galaxy_X,Galaxy_Y,Galaxy_Z,Galaxies_In_Group,Group_HI_Mass,Belong_To_Group)
+{
+	int tid = omp_get_thread_num();
+	#pragma omp for schedule(dynamic,chunk)
+*/
 	for(i=0;i<N_Group;i++){
 		init_my_progressbar(N_Group,&interrupted);
 		for(j=0;j<N_Galaxy;j++){
 			if(fabs(Group_Distance[i] - Galaxy_Distance[j]) < Radius_Cut){
-				distance_SQR=(Group_X[i] - Galaxy_X[j])*(Group_X[i] - Galaxy_X[j]) *
-							(Group_Y[i] - Galaxy_Y[j])*(Group_Y[i] - Galaxy_Y[j]) *
+				distance_SQR=(Group_X[i] - Galaxy_X[j])*(Group_X[i] - Galaxy_X[j]) +
+							(Group_Y[i] - Galaxy_Y[j])*(Group_Y[i] - Galaxy_Y[j]) +
 							(Group_Z[i] - Galaxy_Z[j])*(Group_Z[i] - Galaxy_Z[j]);
 							
 				if(distance_SQR < Group_Radius_SQR[i]){
@@ -327,12 +327,20 @@ int main(int argc, char *argv[])
 					Galaxies_In_Group[i][Galaxies_In_Group[i][0]] = j;
 					Group_HI_Mass[i]+=Galaxy_HI_Mass[j];
 					Belong_To_Group[j]++;
+					i_flag=1;
 				}
 				
 			} 
-		}	
+		}
+			
 	}
-	
+//}	
+
+	for(i=0;i<N_Group;i++)
+		if(Galaxies_In_Group[i][0] > 0)
+			group_counter++;
+			
+	fprintf(stderr,"There are %d Groups with Galaxies Associated with them\n",group_counter);
 	 
      finish_myprogressbar(&interrupted);
 
