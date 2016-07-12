@@ -316,34 +316,58 @@ int main(int argc, char *argv[])
 */
 	for(i=0;i<N_Group;i++){
 		init_my_progressbar(N_Group,&interrupted);
-		for(j=0;j<N_Galaxy;j++){
-			if(fabs(Group_Distance[i] - Galaxy_Distance[j]) < Radius_Cut){
-				distance_SQR=(Group_X[i] - Galaxy_X[j])*(Group_X[i] - Galaxy_X[j]) +
-							(Group_Y[i] - Galaxy_Y[j])*(Group_Y[i] - Galaxy_Y[j]) +
-							(Group_Z[i] - Galaxy_Z[j])*(Group_Z[i] - Galaxy_Z[j]);
+		if(Group_Velocity[i]<=1.0E5 && Group_Ngroup[i] > 4){
+			for(j=0;j<N_Galaxy;j++){
+				if(fabs(Group_Distance[i] - Galaxy_Distance[j]) < Radius_Cut){
+					distance_SQR=(Group_X[i] - Galaxy_X[j])*(Group_X[i] - Galaxy_X[j]) +
+								(Group_Y[i] - Galaxy_Y[j])*(Group_Y[i] - Galaxy_Y[j]) +
+								(Group_Z[i] - Galaxy_Z[j])*(Group_Z[i] - Galaxy_Z[j]);
 							
-				if(distance_SQR < Group_Radius_SQR[i]){
-					Galaxies_In_Group[i][0]++;
-					Galaxies_In_Group[i][Galaxies_In_Group[i][0]] = j;
-					Group_HI_Mass[i]+=Galaxy_HI_Mass[j];
-					Belong_To_Group[j]++;
-					i_flag=1;
-				}
+					if(distance_SQR < Group_Radius_SQR[i]){
+						Galaxies_In_Group[i][0]++;
+						Galaxies_In_Group[i][Galaxies_In_Group[i][0]] = j;
+						Group_HI_Mass[i]+=Galaxy_HI_Mass[j];
+						Belong_To_Group[j]++;
+						i_flag=1;
+					}
 				
-			} 
-		}
-			
+				} 
+			}
+		}		
 	}
 //}	
 
 	for(i=0;i<N_Group;i++)
 		if(Galaxies_In_Group[i][0] > 0)
 			group_counter++;
-			
+	
+	int galaxy_counter=0;
+	int belong_to_multiple_groups=0;
+	int max_group=0,max_galaxy=0;
+	
+	for(i=0;i < N_Galaxy;i++){
+		galaxy_counter += Belong_To_Group[i];
+	
+		if(Belong_To_Group[i] > 1)
+			belong_to_multiple_groups += Belong_To_Group[i];
+		if(Belong_To_Group[i] > max_group)
+			max_group=Belong_To_Group[i];		
+	}
+	
 	fprintf(stderr,"There are %d Groups with Galaxies Associated with them\n",group_counter);
+	fprintf(stderr,"%d Galaxies are in Groups (%lf of total). %d Galaxies are in multiple groups\n",
+					galaxy_counter,galaxy_counter*1.0/N_Galaxy,belong_to_multiple_groups);
+	fprintf(stderr,"The Maximum number of Groups a Galaxy Belongs to is %d\n",max_group);
 	 
      finish_myprogressbar(&interrupted);
 
+
+//	for(i=0;i<N_Galaxy;i++){
+//		fprintf(stdout,"%lf %lf %lf %lf %lf %d",Galaxy_ID[i],Galaxy_RA[i],Galaxy_Dec[i],Galaxy_Velocity[i],
+//   		Galaxy_Bj_mag[i],Galaxy_R_mag[i], Galaxy_I_mag[i],
+//    		Galaxy_Sint[i],Galaxy_Morphology[i]);
+	
+//	}
 
 
 
